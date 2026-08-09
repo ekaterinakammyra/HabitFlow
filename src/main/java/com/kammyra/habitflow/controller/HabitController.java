@@ -25,4 +25,22 @@ public class HabitController {
     public List<Habit> getAllHabits() {
         return habitService.getAllHabits();
     }
+
+    @GetMapping("/{id}")
+    public Habit getHabitById(@PathVariable Long id) {
+        return habitService.getHabitById(id);
+    }
+
+    @PutMapping("/{id}")
+    public Habit updateHabit(
+            @PathVariable Long id,
+            @RequestBody Habit habit
+    ) {
+        return habitService.updateHabit(id, habit);
+    }
+
+    @DeleteMapping("/{id}")
+    public void deleteHabit(@PathVariable Long id) {
+        habitService.deleteHabit(id);
+    }
 }

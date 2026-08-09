@@ -23,4 +23,27 @@ public class HabitService {
     public List<Habit> getAllHabits() {
         return habitRepository.findAll();
     }
+
+    public Habit getHabitById(Long id) {
+        return habitRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Habit not found"));
+    }
+
+    public Habit updateHabit(Long id, Habit updatedHabit) {
+        Habit habit = habitRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Habit not found"));
+
+        habit.setName(updatedHabit.getName());
+        habit.setDescription(updatedHabit.getDescription());
+        habit.setFrequency(updatedHabit.getFrequency());
+
+        return habitRepository.save(habit);
+    }
+
+    public void deleteHabit(Long id) {
+        Habit habit = habitRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Habit not found"));
+
+        habitRepository.delete(habit);
+    }
 }
