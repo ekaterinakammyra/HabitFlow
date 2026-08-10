@@ -4,6 +4,7 @@ import com.kammyra.habitflow.enums.Frequency;
 import jakarta.persistence.*;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Entity
 public class Habit {
@@ -19,6 +20,9 @@ public class Habit {
     private Frequency frequency;
 
     private LocalDateTime createdAt;
+
+    @OneToMany(mappedBy = "habit")
+    private List<HabitCompletion> completions;
 
     public Habit() {}
     public Habit(String name, String description, Frequency frequency, LocalDateTime createdAt) {
