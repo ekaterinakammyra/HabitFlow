@@ -1,7 +1,9 @@
 package com.kammyra.habitflow.controller;
 
+import com.kammyra.habitflow.dto.HabitRequest;
 import com.kammyra.habitflow.entity.Habit;
 import com.kammyra.habitflow.service.HabitService;
+import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -17,8 +19,8 @@ public class HabitController {
     }
 
     @PostMapping
-    public Habit createHabit(@RequestBody Habit habit) {
-        return habitService.createHabit(habit);
+    public Habit createHabit(@Valid @RequestBody HabitRequest request) {
+        return habitService.createHabit(request);
     }
 
     @GetMapping

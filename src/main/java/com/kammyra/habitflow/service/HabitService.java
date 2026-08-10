@@ -1,6 +1,8 @@
 package com.kammyra.habitflow.service;
 
+import com.kammyra.habitflow.dto.HabitRequest;
 import com.kammyra.habitflow.entity.Habit;
+import com.kammyra.habitflow.exception.HabitNotFoundException;
 import com.kammyra.habitflow.repository.HabitRepository;
 import org.springframework.stereotype.Service;
 
@@ -15,8 +17,15 @@ public class HabitService {
         this.habitRepository = habitRepository;
     }
 
-    public Habit createHabit(Habit habit) {
+    public Habit createHabit(HabitRequest request) {
+
+        Habit habit = new Habit();
+
+        habit.setName(request.getName());
+        habit.setDescription(request.getDescription());
+        habit.setFrequency(request.getFrequency());
         habit.setCreatedAt(LocalDateTime.now());
+
         return habitRepository.save(habit);
     }
 
@@ -26,12 +35,12 @@ public class HabitService {
 
     public Habit getHabitById(Long id) {
         return habitRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Habit not found"));
+                .orElseThrow(() -> new HabitNotFoundException(id));
     }
 
     public Habit updateHabit(Long id, Habit updatedHabit) {
         Habit habit = habitRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Habit not found"));
+                .orElseThrow(() -> new HabitNotFoundException(id));
 
         habit.setName(updatedHabit.getName());
         habit.setDescription(updatedHabit.getDescription());
@@ -42,7 +51,7 @@ public class HabitService {
 
     public void deleteHabit(Long id) {
         Habit habit = habitRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Habit not found"));
+                .orElseThrow(() -> new HabitNotFoundException(id));
 
         habitRepository.delete(habit);
     }
