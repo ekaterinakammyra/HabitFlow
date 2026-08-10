@@ -1,6 +1,8 @@
 package com.kammyra.habitflow.service;
 
 import com.kammyra.habitflow.dto.HabitRequest;
+import com.kammyra.habitflow.dto.HabitResponse;
+import com.kammyra.habitflow.dto.HabitUpdateRequest;
 import com.kammyra.habitflow.entity.Habit;
 import com.kammyra.habitflow.exception.HabitNotFoundException;
 import com.kammyra.habitflow.repository.HabitRepository;
@@ -17,7 +19,17 @@ public class HabitService {
         this.habitRepository = habitRepository;
     }
 
-    public Habit createHabit(HabitRequest request) {
+    private HabitResponse toResponse(Habit habit) {
+        return new HabitResponse(
+                habit.getId(),
+                habit.getName(),
+                habit.getDescription(),
+                habit.getFrequency(),
+                habit.getCreatedAt()
+        );
+    }
+
+    public HabitResponse createHabit(HabitRequest request) {
 
         Habit habit = new Habit();
 
@@ -26,27 +38,35 @@ public class HabitService {
         habit.setFrequency(request.getFrequency());
         habit.setCreatedAt(LocalDateTime.now());
 
-        return habitRepository.save(habit);
+        return toResponse(habitRepository.save(habit));
     }
 
-    public List<Habit> getAllHabits() {
-        return habitRepository.findAll();
+    public List<HabitResponse> getAllHabits() {
+        return habitRepository.findAll()
+                .stream()
+                .map(this::toResponse)
+                .toList();
     }
 
-    public Habit getHabitById(Long id) {
-        return habitRepository.findById(id)
-                .orElseThrow(() -> new HabitNotFoundException(id));
-    }
-
-    public Habit updateHabit(Long id, Habit updatedHabit) {
+    public HabitResponse getHabitById(Long id) {
         Habit habit = habitRepository.findById(id)
                 .orElseThrow(() -> new HabitNotFoundException(id));
 
-        habit.setName(updatedHabit.getName());
-        habit.setDescription(updatedHabit.getDescription());
-        habit.setFrequency(updatedHabit.getFrequency());
+        return toResponse(habit);
+    }
 
-        return habitRepository.save(habit);
+    public HabitResponse updateHabit(
+            Long id,
+            HabitUpdateRequest request
+    ) {
+        Habit habit = habitRepository.findById(id)
+                .orElseThrow(() -> new HabitNotFoundException(id));
+
+        habit.setName(request.getName());
+        habit.setDescription(request.getDescription());
+        habit.setFrequency(request.getFrequency());
+
+        return toResponse(habitRepository.save(habit));
     }
 
     public void deleteHabit(Long id) {

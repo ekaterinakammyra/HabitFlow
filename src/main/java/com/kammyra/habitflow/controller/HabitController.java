@@ -1,9 +1,12 @@
 package com.kammyra.habitflow.controller;
 
 import com.kammyra.habitflow.dto.HabitRequest;
+import com.kammyra.habitflow.dto.HabitResponse;
+import com.kammyra.habitflow.dto.HabitUpdateRequest;
 import com.kammyra.habitflow.entity.Habit;
 import com.kammyra.habitflow.service.HabitService;
 import jakarta.validation.Valid;
+import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -19,29 +22,30 @@ public class HabitController {
     }
 
     @PostMapping
-    public Habit createHabit(@Valid @RequestBody HabitRequest request) {
+    public HabitResponse createHabit(@Valid @RequestBody HabitRequest request) {
         return habitService.createHabit(request);
     }
 
     @GetMapping
-    public List<Habit> getAllHabits() {
+    public List<HabitResponse> getAllHabits() {
         return habitService.getAllHabits();
     }
 
     @GetMapping("/{id}")
-    public Habit getHabitById(@PathVariable Long id) {
+    public HabitResponse getHabitById(@PathVariable Long id) {
         return habitService.getHabitById(id);
     }
 
     @PutMapping("/{id}")
-    public Habit updateHabit(
+    public HabitResponse updateHabit(
             @PathVariable Long id,
-            @RequestBody Habit habit
+            @Valid @RequestBody HabitUpdateRequest request
     ) {
-        return habitService.updateHabit(id, habit);
+        return habitService.updateHabit(id, request);
     }
 
     @DeleteMapping("/{id}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
     public void deleteHabit(@PathVariable Long id) {
         habitService.deleteHabit(id);
     }
