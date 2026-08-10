@@ -1,5 +1,6 @@
 package com.kammyra.habitflow.controller;
 
+import com.kammyra.habitflow.dto.HabitCompletionRequest;
 import com.kammyra.habitflow.dto.HabitCompletionResponse;
 import com.kammyra.habitflow.dto.HabitStatisticsResponse;
 import com.kammyra.habitflow.service.HabitCompletionService;
@@ -21,9 +22,10 @@ public class HabitCompletionController {
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     public HabitCompletionResponse createCompletion(
-            @PathVariable Long habitId
+            @PathVariable Long habitId,
+            @RequestBody(required = false) HabitCompletionRequest request
     ) {
-        return completionService.createCompletion(habitId);
+        return completionService.createCompletion(habitId, request);
     }
 
     @GetMapping
