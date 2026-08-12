@@ -115,7 +115,7 @@ public class HabitCompletionService {
         }
 
         List<LocalDate> dates = completions.stream()
-                .map(completion -> completion.getCompletedAt().toLocalDate())
+                .map(completion -> completion.getCompletionDate())
                 .distinct()
                 .toList();
 
@@ -146,7 +146,7 @@ public class HabitCompletionService {
         }
 
         List<LocalDate> dates = completions.stream()
-                .map(completion -> completion.getCompletedAt().toLocalDate())
+                .map(completion -> completion.getCompletionDate())
                 .distinct()
                 .sorted()
                 .toList();
