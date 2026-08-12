@@ -5,6 +5,7 @@ import com.kammyra.habitflow.dto.HabitCompletionResponse;
 import com.kammyra.habitflow.dto.HabitStatisticsResponse;
 import com.kammyra.habitflow.entity.Habit;
 import com.kammyra.habitflow.entity.HabitCompletion;
+import com.kammyra.habitflow.exception.HabitAlreadyCompletedException;
 import com.kammyra.habitflow.exception.HabitNotFoundException;
 import com.kammyra.habitflow.repository.HabitCompletionRepository;
 import com.kammyra.habitflow.repository.HabitRepository;
@@ -45,6 +46,21 @@ public class HabitCompletionService {
         } else {
             completion.setCompletedAt(LocalDateTime.now());
         }
+
+        LocalDate completionDate =
+                completion.getCompletedAt().toLocalDate();
+
+        if (completionRepository.existsByHabitIdAndCompletionDate(
+                habitId,
+                completionDate
+        )) {
+            throw new HabitAlreadyCompletedException(
+                    habitId,
+                    completionDate
+            );
+        }
+
+        completion.setCompletionDate(completionDate);
 
         HabitCompletion saved = completionRepository.save(completion);
 

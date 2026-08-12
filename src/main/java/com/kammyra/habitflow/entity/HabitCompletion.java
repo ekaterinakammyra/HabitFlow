@@ -2,9 +2,20 @@ package com.kammyra.habitflow.entity;
 
 import jakarta.persistence.*;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import jakarta.persistence.Table;
+import jakarta.persistence.UniqueConstraint;
+
 
 @Entity
+@Table(uniqueConstraints = {
+        @UniqueConstraint(
+            name = "uk_habit_completion_date",
+            columnNames = {"habit_id", "completion_date"}
+        )
+    }
+)
 public class HabitCompletion {
 
     @Id
@@ -12,6 +23,9 @@ public class HabitCompletion {
     private Long id;
 
     private LocalDateTime completedAt;
+
+    @Column(nullable = false)
+    private LocalDate completionDate;
 
     @ManyToOne
     @JoinColumn(name = "habit_id", nullable = false)
@@ -38,5 +52,13 @@ public class HabitCompletion {
 
     public void setHabit(Habit habit) {
         this.habit = habit;
+    }
+
+    public LocalDate getCompletionDate() {
+        return completionDate;
+    }
+
+    public void setCompletionDate(LocalDate completionDate) {
+        this.completionDate = completionDate;
     }
 }
