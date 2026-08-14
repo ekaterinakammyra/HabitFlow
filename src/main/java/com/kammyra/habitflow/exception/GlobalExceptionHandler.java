@@ -70,4 +70,17 @@ public class GlobalExceptionHandler {
                 .status(HttpStatus.CONFLICT)
                 .body(error);
     }
+
+    @ExceptionHandler(FutureCompletionException.class)
+    public ResponseEntity<Map<String, String>> handleFutureCompletion(
+            FutureCompletionException exception
+    ) {
+
+        Map<String, String> error = new HashMap<>();
+        error.put("message", exception.getMessage());
+
+        return ResponseEntity
+                .status(HttpStatus.BAD_REQUEST)
+                .body(error);
+    }
 }

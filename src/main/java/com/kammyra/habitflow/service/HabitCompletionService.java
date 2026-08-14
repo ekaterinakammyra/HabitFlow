@@ -5,28 +5,36 @@ import com.kammyra.habitflow.dto.HabitCompletionResponse;
 import com.kammyra.habitflow.dto.HabitStatisticsResponse;
 import com.kammyra.habitflow.entity.Habit;
 import com.kammyra.habitflow.entity.HabitCompletion;
+import com.kammyra.habitflow.enums.Frequency;
+import com.kammyra.habitflow.exception.FutureCompletionException;
 import com.kammyra.habitflow.exception.HabitAlreadyCompletedException;
 import com.kammyra.habitflow.exception.HabitNotFoundException;
 import com.kammyra.habitflow.repository.HabitCompletionRepository;
 import com.kammyra.habitflow.repository.HabitRepository;
 import org.springframework.stereotype.Service;
 
+import java.time.Clock;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Set;
+import java.util.HashSet;
 
 @Service
 public class HabitCompletionService {
 
     private final HabitCompletionRepository completionRepository;
     private final HabitRepository habitRepository;
+    private final Clock clock;
 
     public HabitCompletionService(
             HabitCompletionRepository completionRepository,
-            HabitRepository habitRepository
+            HabitRepository habitRepository,
+            Clock clock
     ) {
         this.completionRepository = completionRepository;
         this.habitRepository = habitRepository;
+        this.clock = clock;
     }
 
     public HabitCompletionResponse createCompletion(
@@ -44,7 +52,11 @@ public class HabitCompletionService {
         if (request != null && request.getCompletedAt() != null) {
             completion.setCompletedAt(request.getCompletedAt());
         } else {
-            completion.setCompletedAt(LocalDateTime.now());
+            completion.setCompletedAt(LocalDateTime.now(clock));
+        }
+
+        if (completion.getCompletedAt().isAfter(LocalDateTime.now(clock))) {
+            throw new FutureCompletionException(completion.getCompletedAt());
         }
 
         LocalDate completionDate =
@@ -96,30 +108,58 @@ public class HabitCompletionService {
 
         long totalCompletions = completions.size();
 
-        int currentStreak = calculateCurrentStreak(completions);
-        int bestStreak = calculateBestStreak(completions);
+        int currentStreak = calculateCurrentStreak(
+                habit,
+                completions
+        );
+
+        int bestStreak = calculateBestStreak(
+                habit,
+                completions
+        );
+
+        LocalDate lastCompletedDate = completions.stream()
+                .map(HabitCompletion::getCompletionDate)
+                .max(LocalDate::compareTo)
+                .orElse(null);
 
         return new HabitStatisticsResponse(
                 habit.getId(),
                 habit.getName(),
                 totalCompletions,
                 currentStreak,
-                bestStreak
+                bestStreak,
+                lastCompletedDate
         );
     }
 
-    private int calculateCurrentStreak(List<HabitCompletion> completions) {
+    private int calculateCurrentStreak(
+            Habit habit,
+            List<HabitCompletion> completions
+    ) {
 
         if (completions.isEmpty()) {
             return 0;
         }
 
+        if (habit.getFrequency() == Frequency.DAILY) {
+            return calculateDailyCurrentStreak(completions);
+        }
+
+        return calculateWeeklyCurrentStreak(completions);
+    }
+
+    private int calculateDailyCurrentStreak(
+            List<HabitCompletion> completions
+    ) {
+
         List<LocalDate> dates = completions.stream()
-                .map(completion -> completion.getCompletionDate())
+                .map(HabitCompletion::getCompletionDate)
                 .distinct()
+                .sorted()
                 .toList();
 
-        LocalDate today = LocalDate.now();
+        LocalDate today = LocalDate.now(clock);
 
         int streak = 0;
         LocalDate expectedDate = today;
@@ -139,14 +179,59 @@ public class HabitCompletionService {
         return streak;
     }
 
-    private int calculateBestStreak(List<HabitCompletion> completions) {
+    private int calculateWeeklyCurrentStreak(
+            List<HabitCompletion> completions
+    ) {
+
+        Set<LocalDate> weeks = new HashSet<>();
+
+        for (HabitCompletion completion : completions) {
+
+            LocalDate week = completion.getCompletionDate()
+                    .with(java.time.DayOfWeek.MONDAY);
+
+            weeks.add(week);
+        }
+
+        if (weeks.isEmpty()) {
+            return 0;
+        }
+
+        LocalDate currentWeek = LocalDate.now()
+                .with(java.time.DayOfWeek.MONDAY);
+
+        int streak = 0;
+
+        while (weeks.contains(currentWeek)) {
+            streak++;
+            currentWeek = currentWeek.minusWeeks(1);
+        }
+
+        return streak;
+    }
+
+    private int calculateBestStreak(
+            Habit habit,
+            List<HabitCompletion> completions
+    ) {
 
         if (completions.isEmpty()) {
             return 0;
         }
 
+        if (habit.getFrequency() == Frequency.DAILY) {
+            return calculateDailyBestStreak(completions);
+        }
+
+        return calculateWeeklyBestStreak(completions);
+    }
+
+    private int calculateDailyBestStreak(
+            List<HabitCompletion> completions
+    ) {
+
         List<LocalDate> dates = completions.stream()
-                .map(completion -> completion.getCompletionDate())
+                .map(HabitCompletion::getCompletionDate)
                 .distinct()
                 .sorted()
                 .toList();
@@ -165,7 +250,50 @@ public class HabitCompletionService {
                 currentStreak = 1;
             }
 
-            bestStreak = Math.max(bestStreak, currentStreak);
+            bestStreak = Math.max(
+                    bestStreak,
+                    currentStreak
+            );
+        }
+
+        return bestStreak;
+    }
+
+    private int calculateWeeklyBestStreak(
+            List<HabitCompletion> completions
+    ) {
+
+        List<LocalDate> weeks = completions.stream()
+                .map(completion ->
+                        completion.getCompletionDate()
+                                .with(java.time.DayOfWeek.MONDAY)
+                )
+                .distinct()
+                .sorted()
+                .toList();
+
+        if (weeks.isEmpty()) {
+            return 0;
+        }
+
+        int currentStreak = 1;
+        int bestStreak = 1;
+
+        for (int i = 1; i < weeks.size(); i++) {
+
+            LocalDate previousWeek = weeks.get(i - 1);
+            LocalDate currentWeek = weeks.get(i);
+
+            if (currentWeek.equals(previousWeek.plusWeeks(1))) {
+                currentStreak++;
+            } else {
+                currentStreak = 1;
+            }
+
+            bestStreak = Math.max(
+                    bestStreak,
+                    currentStreak
+            );
         }
 
         return bestStreak;
