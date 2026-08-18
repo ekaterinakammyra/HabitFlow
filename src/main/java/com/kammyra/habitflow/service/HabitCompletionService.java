@@ -14,8 +14,11 @@ import com.kammyra.habitflow.repository.HabitRepository;
 import org.springframework.stereotype.Service;
 
 import java.time.Clock;
+import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.temporal.TemporalAdjusters;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.HashSet;
@@ -26,6 +29,10 @@ public class HabitCompletionService {
     private final HabitCompletionRepository completionRepository;
     private final HabitRepository habitRepository;
     private final Clock clock;
+
+    private LocalDate startOfWeek(LocalDate date) {
+        return date.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY));
+    }
 
     public HabitCompletionService(
             HabitCompletionRepository completionRepository,
@@ -179,35 +186,35 @@ public class HabitCompletionService {
         return streak;
     }
 
-    private int calculateWeeklyCurrentStreak(
-            List<HabitCompletion> completions
-    ) {
+    private int calculateWeeklyCurrentStreak(List<HabitCompletion> completions) {
 
-        Set<LocalDate> weeks = new HashSet<>();
+        Set<LocalDate> completedWeeks = getCompletedWeeks(completions);
 
-        for (HabitCompletion completion : completions) {
-
-            LocalDate week = completion.getCompletionDate()
-                    .with(java.time.DayOfWeek.MONDAY);
-
-            weeks.add(week);
-        }
-
-        if (weeks.isEmpty()) {
+        if (completedWeeks.isEmpty()) {
             return 0;
         }
 
-        LocalDate currentWeek = LocalDate.now()
-                .with(java.time.DayOfWeek.MONDAY);
+        List<LocalDate> weeks = completedWeeks.stream()
+                .sorted()
+                .toList();
 
-        int streak = 0;
+        LocalDate lastWeek = weeks.get(weeks.size() - 1);
 
-        while (weeks.contains(currentWeek)) {
-            streak++;
-            currentWeek = currentWeek.minusWeeks(1);
+        int currentStreak = 1;
+
+        for (int i = weeks.size() - 2; i >= 0; i--) {
+
+            LocalDate previousWeek = weeks.get(i);
+
+            if (previousWeek.plusWeeks(1).equals(lastWeek)) {
+                currentStreak++;
+                lastWeek = previousWeek;
+            } else {
+                break;
+            }
         }
 
-        return streak;
+        return currentStreak;
     }
 
     private int calculateBestStreak(
@@ -259,43 +266,74 @@ public class HabitCompletionService {
         return bestStreak;
     }
 
-    private int calculateWeeklyBestStreak(
-            List<HabitCompletion> completions
-    ) {
+    private int calculateWeeklyBestStreak(List<HabitCompletion> completions) {
 
-        List<LocalDate> weeks = completions.stream()
-                .map(completion ->
-                        completion.getCompletionDate()
-                                .with(java.time.DayOfWeek.MONDAY)
-                )
-                .distinct()
-                .sorted()
-                .toList();
+        Set<LocalDate> completedWeeks = getCompletedWeeks(completions);
 
-        if (weeks.isEmpty()) {
+        if (completedWeeks.isEmpty()) {
             return 0;
         }
 
-        int currentStreak = 1;
+        List<LocalDate> weeks = completedWeeks.stream()
+                .sorted()
+                .toList();
+
         int bestStreak = 1;
+        int currentStreak = 1;
 
         for (int i = 1; i < weeks.size(); i++) {
 
             LocalDate previousWeek = weeks.get(i - 1);
             LocalDate currentWeek = weeks.get(i);
 
-            if (currentWeek.equals(previousWeek.plusWeeks(1))) {
+            if (previousWeek.plusWeeks(1).equals(currentWeek)) {
                 currentStreak++;
             } else {
                 currentStreak = 1;
             }
 
-            bestStreak = Math.max(
-                    bestStreak,
-                    currentStreak
-            );
+            bestStreak = Math.max(bestStreak, currentStreak);
         }
 
         return bestStreak;
+    }
+
+    private Set<LocalDate> getCompletedWeeks(List<HabitCompletion> completions) {
+
+        Set<LocalDate> weeks = new LinkedHashSet<>();
+
+        for (HabitCompletion completion : completions) {
+            LocalDate weekStart = startOfWeek(completion.getCompletionDate());
+            weeks.add(weekStart);
+        }
+
+        return weeks;
+    }
+
+    public void completeHabit(Long habitId) {
+
+        Habit habit = habitRepository.findById(habitId)
+                .orElseThrow(() -> new HabitNotFoundException(habitId));
+
+        LocalDate today = LocalDate.now(clock);
+
+        boolean alreadyCompleted =
+                completionRepository.existsByHabitIdAndCompletionDate(
+                        habitId,
+                        today
+                );
+
+        if (alreadyCompleted) {
+            throw new IllegalStateException(
+                    "Habit is already completed today"
+            );
+        }
+
+        HabitCompletion completion = new HabitCompletion();
+
+        completion.setHabit(habit);
+        completion.setCompletionDate(today);
+
+        completionRepository.save(completion);
     }
 }
