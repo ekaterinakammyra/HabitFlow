@@ -170,4 +170,134 @@ class HabitControllerTest {
 
         verify(habitService).deleteHabit(1L);
     }
+
+    @Test
+    void shouldRejectHabitWithBlankName() throws Exception {
+
+        HabitUpdateRequest request = new HabitUpdateRequest();
+
+        request.setName("");
+        request.setDescription("Читать каждый день");
+        request.setFrequency(Frequency.DAILY);
+
+        mockMvc.perform(
+                        post("/api/habits")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(objectMapper.writeValueAsString(request))
+                )
+                .andExpect(status().isBadRequest());
+
+        verify(habitService, never())
+                .createHabit(any(HabitRequest.class));
+    }
+
+    @Test
+    void shouldRejectHabitWithTooLongName() throws Exception {
+
+        String longName = "a".repeat(101);
+
+        HabitUpdateRequest request = new HabitUpdateRequest();
+
+        request.setName(longName);
+        request.setDescription("Описание привычки");
+        request.setFrequency(Frequency.DAILY);
+
+        mockMvc.perform(
+                        post("/api/habits")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(objectMapper.writeValueAsString(request))
+                )
+                .andExpect(status().isBadRequest());
+
+        verify(habitService, never())
+                .createHabit(any(HabitRequest.class));
+    }
+
+    @Test
+    void shouldRejectHabitWithoutFrequency() throws Exception {
+
+        HabitUpdateRequest request = new HabitUpdateRequest();
+
+        request.setName("Чтение");
+        request.setDescription("Читать каждый день");
+        request.setFrequency(null);
+
+        mockMvc.perform(
+                        post("/api/habits")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(objectMapper.writeValueAsString(request))
+                )
+                .andExpect(status().isBadRequest());
+
+        verify(habitService, never())
+                .createHabit(any(HabitRequest.class));
+    }
+
+    @Test
+    void shouldRejectHabitWithTooLongDescription() throws Exception {
+
+        String longDescription = "a".repeat(501);
+
+        HabitUpdateRequest request = new HabitUpdateRequest();
+
+        request.setName("Чтение");
+        request.setDescription(longDescription);
+        request.setFrequency(Frequency.DAILY);
+
+        mockMvc.perform(
+                        post("/api/habits")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(objectMapper.writeValueAsString(request))
+                )
+                .andExpect(status().isBadRequest());
+
+        verify(habitService, never())
+                .createHabit(any(HabitRequest.class));
+    }
+
+    @Test
+    void shouldRejectUpdateWithBlankName() throws Exception {
+
+        HabitUpdateRequest request = new HabitUpdateRequest();
+
+        request.setName("");
+        request.setDescription("Описание привычки");
+        request.setFrequency(Frequency.DAILY);
+
+        mockMvc.perform(
+                        put("/api/habits/1")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(objectMapper.writeValueAsString(request))
+                )
+                .andExpect(status().isBadRequest());
+
+        verify(habitService, never())
+                .updateHabit(
+                        eq(1L),
+                        any(HabitUpdateRequest.class)
+                );
+    }
+
+    @Test
+    void shouldRejectUpdateWithoutFrequency() throws Exception {
+
+        HabitUpdateRequest request = new HabitUpdateRequest();
+
+        request.setName("Чтение");
+        request.setDescription("30 минут в день");
+        request.setFrequency(null);
+
+        mockMvc.perform(
+                        put("/api/habits/1")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(objectMapper.writeValueAsString(request))
+                )
+                .andExpect(status().isBadRequest());
+
+        verify(habitService, never())
+                .updateHabit(
+                        eq(1L),
+                        any(HabitUpdateRequest.class)
+                );
+    }
 }
