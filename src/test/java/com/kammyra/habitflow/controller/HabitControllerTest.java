@@ -174,7 +174,7 @@ class HabitControllerTest {
     @Test
     void shouldRejectHabitWithBlankName() throws Exception {
 
-        HabitUpdateRequest request = new HabitUpdateRequest();
+        HabitRequest request = new HabitRequest();
 
         request.setName("");
         request.setDescription("Читать каждый день");
@@ -196,7 +196,7 @@ class HabitControllerTest {
 
         String longName = "a".repeat(101);
 
-        HabitUpdateRequest request = new HabitUpdateRequest();
+        HabitRequest request = new HabitRequest();
 
         request.setName(longName);
         request.setDescription("Описание привычки");
@@ -216,7 +216,7 @@ class HabitControllerTest {
     @Test
     void shouldRejectHabitWithoutFrequency() throws Exception {
 
-        HabitUpdateRequest request = new HabitUpdateRequest();
+        HabitRequest request = new HabitRequest();
 
         request.setName("Чтение");
         request.setDescription("Читать каждый день");
@@ -238,7 +238,7 @@ class HabitControllerTest {
 
         String longDescription = "a".repeat(501);
 
-        HabitUpdateRequest request = new HabitUpdateRequest();
+        HabitRequest request = new HabitRequest();
 
         request.setName("Чтение");
         request.setDescription(longDescription);
