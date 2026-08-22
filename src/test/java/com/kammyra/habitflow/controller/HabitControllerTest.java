@@ -1,6 +1,6 @@
 package com.kammyra.habitflow.controller;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.ObjectMapper;
 import com.kammyra.habitflow.dto.HabitRequest;
 import com.kammyra.habitflow.dto.HabitResponse;
 import com.kammyra.habitflow.dto.HabitUpdateRequest;
@@ -28,7 +28,8 @@ class HabitControllerTest {
     @Autowired
     private MockMvc mockMvc;
 
-    private final ObjectMapper objectMapper = new ObjectMapper();
+    @Autowired
+    private ObjectMapper objectMapper;
 
     @MockitoBean
     private HabitService habitService;
