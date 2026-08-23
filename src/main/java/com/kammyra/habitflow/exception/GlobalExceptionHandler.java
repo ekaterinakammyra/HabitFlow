@@ -59,12 +59,15 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler(HabitAlreadyCompletedException.class)
-    public ResponseEntity<Map<String, String>> handleHabitAlreadyCompleted(
+    public ResponseEntity<ErrorResponse> handleHabitAlreadyCompleted(
             HabitAlreadyCompletedException exception
     ) {
-        Map<String, String> error = new HashMap<>();
-
-        error.put("message", exception.getMessage());
+        ErrorResponse error = new ErrorResponse(
+                LocalDateTime.now(),
+                HttpStatus.CONFLICT.value(),
+                "Conflict",
+                exception.getMessage()
+        );
 
         return ResponseEntity
                 .status(HttpStatus.CONFLICT)
@@ -72,12 +75,15 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler(FutureCompletionException.class)
-    public ResponseEntity<Map<String, String>> handleFutureCompletion(
+    public ResponseEntity<ErrorResponse> handleFutureCompletion(
             FutureCompletionException exception
     ) {
-
-        Map<String, String> error = new HashMap<>();
-        error.put("message", exception.getMessage());
+        ErrorResponse error = new ErrorResponse(
+                LocalDateTime.now(),
+                HttpStatus.BAD_REQUEST.value(),
+                "Bad Request",
+                exception.getMessage()
+        );
 
         return ResponseEntity
                 .status(HttpStatus.BAD_REQUEST)
