@@ -9,7 +9,7 @@ import jakarta.persistence.UniqueConstraint;
 
 
 @Entity
-@Table(uniqueConstraints = {
+@Table(name = "habit_completion", uniqueConstraints = {
         @UniqueConstraint(
             name = "uk_habit_completion_date",
             columnNames = {"habit_id", "completion_date"}
@@ -22,12 +22,13 @@ public class HabitCompletion {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Column(nullable = false)
     private LocalDateTime completedAt;
 
     @Column(nullable = false)
     private LocalDate completionDate;
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "habit_id", nullable = false)
     private Habit habit;
 

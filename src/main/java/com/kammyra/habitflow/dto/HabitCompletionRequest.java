@@ -1,19 +1,21 @@
 package com.kammyra.habitflow.dto;
 
-import java.time.LocalDateTime;
+import jakarta.validation.constraints.PastOrPresent;
+import java.time.LocalDate;
 
 public class HabitCompletionRequest {
 
-    private LocalDateTime completedAt;
+    @PastOrPresent(message = "Completion date cannot be in the future")
+    private LocalDate completionDate;
 
     public HabitCompletionRequest() {
     }
 
-    public LocalDateTime getCompletedAt() {
-        return completedAt;
+    public LocalDate getCompletionDate() {
+        return completionDate;
     }
 
-    public void setCompletedAt(LocalDateTime completedAt) {
-        this.completedAt = completedAt;
+    public void setCompletionDate(LocalDate completionDate) {
+        this.completionDate = completionDate;
     }
 }

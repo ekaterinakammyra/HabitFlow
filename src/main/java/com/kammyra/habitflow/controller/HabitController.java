@@ -3,7 +3,6 @@ package com.kammyra.habitflow.controller;
 import com.kammyra.habitflow.dto.HabitRequest;
 import com.kammyra.habitflow.dto.HabitResponse;
 import com.kammyra.habitflow.dto.HabitUpdateRequest;
-import com.kammyra.habitflow.entity.Habit;
 import com.kammyra.habitflow.service.HabitService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
@@ -22,6 +21,7 @@ public class HabitController {
     }
 
     @PostMapping
+    @ResponseStatus(HttpStatus.CREATED)
     public HabitResponse createHabit(@Valid @RequestBody HabitRequest request) {
         return habitService.createHabit(request);
     }

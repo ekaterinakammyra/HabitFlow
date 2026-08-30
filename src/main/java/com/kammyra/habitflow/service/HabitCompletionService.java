@@ -12,6 +12,7 @@ import com.kammyra.habitflow.exception.HabitNotFoundException;
 import com.kammyra.habitflow.repository.HabitCompletionRepository;
 import com.kammyra.habitflow.repository.HabitRepository;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Clock;
 import java.time.DayOfWeek;
@@ -21,18 +22,14 @@ import java.time.temporal.TemporalAdjusters;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
-import java.util.HashSet;
 
 @Service
+@Transactional
 public class HabitCompletionService {
 
     private final HabitCompletionRepository completionRepository;
     private final HabitRepository habitRepository;
     private final Clock clock;
-
-    private LocalDate startOfWeek(LocalDate date) {
-        return date.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY));
-    }
 
     public HabitCompletionService(
             HabitCompletionRepository completionRepository,
@@ -52,66 +49,50 @@ public class HabitCompletionService {
         Habit habit = habitRepository.findById(habitId)
                 .orElseThrow(() -> new HabitNotFoundException(habitId));
 
+        LocalDate today = LocalDate.now(clock);
+        LocalDate completionDate = today;
+
+        if (request != null && request.getCompletionDate() != null) {
+            completionDate = request.getCompletionDate();
+        }
+
+        if (completionDate.isAfter(today)) {
+            throw new FutureCompletionException(completionDate);
+        }
+
+        if (completionRepository.existsByHabitIdAndCompletionDate(habitId, completionDate)) {
+            throw new HabitAlreadyCompletedException(habitId, completionDate);
+        }
+
         HabitCompletion completion = new HabitCompletion();
 
         completion.setHabit(habit);
-
-        if (request != null && request.getCompletedAt() != null) {
-            completion.setCompletedAt(request.getCompletedAt());
-        } else {
-            completion.setCompletedAt(LocalDateTime.now(clock));
-        }
-
-        if (completion.getCompletedAt().isAfter(LocalDateTime.now(clock))) {
-            throw new FutureCompletionException(completion.getCompletedAt());
-        }
-
-        LocalDate completionDate =
-                completion.getCompletedAt().toLocalDate();
-
-        if (completionRepository.existsByHabitIdAndCompletionDate(
-                habitId,
-                completionDate
-        )) {
-            throw new HabitAlreadyCompletedException(
-                    habitId,
-                    completionDate
-            );
-        }
-
         completion.setCompletionDate(completionDate);
+        completion.setCompletedAt(LocalDateTime.now(clock));
 
         HabitCompletion saved = completionRepository.save(completion);
-
-        return new HabitCompletionResponse(
-                saved.getId(),
-                habit.getId(),
-                saved.getCompletedAt()
-        );
+        return toResponse(saved);
     }
 
+    @Transactional(readOnly = true)
     public List<HabitCompletionResponse> getCompletions(Long habitId) {
 
         if (!habitRepository.existsById(habitId)) {
             throw new HabitNotFoundException(habitId);
         }
-
-        return completionRepository.findByHabitId(habitId)
+        return completionRepository.findByHabitIdWithHabit(habitId)
                 .stream()
-                .map(completion -> new HabitCompletionResponse(
-                        completion.getId(),
-                        completion.getHabit().getId(),
-                        completion.getCompletedAt()
-                ))
+                .map(this::toResponse)
                 .toList();
     }
 
+    @Transactional(readOnly = true)
     public HabitStatisticsResponse getStatistics(Long habitId) {
         Habit habit = habitRepository.findById(habitId)
                 .orElseThrow(() -> new HabitNotFoundException(habitId));
 
         List<HabitCompletion> completions = completionRepository
-                        .findByHabitIdOrderByCompletedAtAsc(habitId);
+                .findByHabitIdOrderByCompletionDateAsc(habitId);
 
         long totalCompletions = completions.size();
 
@@ -140,11 +121,16 @@ public class HabitCompletionService {
         );
     }
 
-    private int calculateCurrentStreak(
-            Habit habit,
-            List<HabitCompletion> completions
-    ) {
+    private HabitCompletionResponse toResponse(HabitCompletion completion) {
+        return new HabitCompletionResponse(
+                completion.getId(),
+                completion.getHabit().getId(),
+                completion.getCompletionDate(),
+                completion.getCompletedAt()
+        );
+    }
 
+    private int calculateCurrentStreak(Habit habit, List<HabitCompletion> completions) {
         if (completions.isEmpty()) {
             return 0;
         }
@@ -166,19 +152,26 @@ public class HabitCompletionService {
                 .sorted()
                 .toList();
 
+        if (dates.isEmpty()) {
+            return 0;
+        }
+
         LocalDate today = LocalDate.now(clock);
+        LocalDate latestDate = dates.get(dates.size() - 1);
 
-        int streak = 0;
-        LocalDate expectedDate = today;
+        if (!latestDate.isEqual(today) && !latestDate.isEqual(today.minusDays(1))) {
+            return 0;
+        }
 
-        for (int i = dates.size() - 1; i >= 0; i--) {
+        int streak = 1;
+        LocalDate expectedPrevious = latestDate.minusDays(1);
 
-            LocalDate date = dates.get(i);
-
-            if (date.equals(expectedDate)) {
+        for (int i = dates.size() - 2; i >= 0; i--) {
+            LocalDate currentDate = dates.get(i);
+            if (currentDate.isEqual(expectedPrevious)) {
                 streak++;
-                expectedDate = expectedDate.minusDays(1);
-            } else if (date.isBefore(expectedDate)) {
+                expectedPrevious = expectedPrevious.minusDays(1);
+            } else {
                 break;
             }
         }
@@ -198,30 +191,32 @@ public class HabitCompletionService {
                 .sorted()
                 .toList();
 
-        LocalDate lastWeek = weeks.get(weeks.size() - 1);
+        LocalDate today = LocalDate.now(clock);
+        LocalDate currentWeekStart = today.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY));
+        LocalDate lastWeekStart = currentWeekStart.minusWeeks(1);
 
-        int currentStreak = 1;
+        LocalDate latestWeek = weeks.get(weeks.size() - 1);
 
+        if (!latestWeek.isEqual(currentWeekStart) && !latestWeek.isEqual(lastWeekStart)) {
+            return 0;
+        }
+
+        int streak = 1;
+        LocalDate expectedPreviousWeek = latestWeek.minusWeeks(1);
         for (int i = weeks.size() - 2; i >= 0; i--) {
-
-            LocalDate previousWeek = weeks.get(i);
-
-            if (previousWeek.plusWeeks(1).equals(lastWeek)) {
-                currentStreak++;
-                lastWeek = previousWeek;
+            LocalDate currentWeek = weeks.get(i);
+            if (currentWeek.isEqual(expectedPreviousWeek)) {
+                streak++;
+                expectedPreviousWeek = expectedPreviousWeek.minusWeeks(1);
             } else {
                 break;
             }
         }
 
-        return currentStreak;
+        return streak;
     }
 
-    private int calculateBestStreak(
-            Habit habit,
-            List<HabitCompletion> completions
-    ) {
-
+    private int calculateBestStreak(Habit habit, List<HabitCompletion> completions) {
         if (completions.isEmpty()) {
             return 0;
         }
@@ -242,6 +237,10 @@ public class HabitCompletionService {
                 .distinct()
                 .sorted()
                 .toList();
+
+        if (dates.isEmpty()) {
+            return 0;
+        }
 
         int currentStreak = 1;
         int bestStreak = 1;
@@ -286,7 +285,7 @@ public class HabitCompletionService {
             LocalDate previousWeek = weeks.get(i - 1);
             LocalDate currentWeek = weeks.get(i);
 
-            if (previousWeek.plusWeeks(1).equals(currentWeek)) {
+            if (currentWeek.equals(previousWeek.plusWeeks(1))) {
                 currentStreak++;
             } else {
                 currentStreak = 1;
@@ -303,7 +302,8 @@ public class HabitCompletionService {
         Set<LocalDate> weeks = new LinkedHashSet<>();
 
         for (HabitCompletion completion : completions) {
-            LocalDate weekStart = startOfWeek(completion.getCompletionDate());
+            LocalDate weekStart = completion.getCompletionDate()
+                    .with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY));
             weeks.add(weekStart);
         }
 
@@ -311,29 +311,6 @@ public class HabitCompletionService {
     }
 
     public void completeHabit(Long habitId) {
-
-        Habit habit = habitRepository.findById(habitId)
-                .orElseThrow(() -> new HabitNotFoundException(habitId));
-
-        LocalDate today = LocalDate.now(clock);
-
-        boolean alreadyCompleted =
-                completionRepository.existsByHabitIdAndCompletionDate(
-                        habitId,
-                        today
-                );
-
-        if (alreadyCompleted) {
-            throw new IllegalStateException(
-                    "Habit is already completed today"
-            );
-        }
-
-        HabitCompletion completion = new HabitCompletion();
-
-        completion.setHabit(habit);
-        completion.setCompletionDate(today);
-
-        completionRepository.save(completion);
+        createCompletion(habitId, null);
     }
 }

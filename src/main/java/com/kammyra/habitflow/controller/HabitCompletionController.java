@@ -4,6 +4,7 @@ import com.kammyra.habitflow.dto.HabitCompletionRequest;
 import com.kammyra.habitflow.dto.HabitCompletionResponse;
 import com.kammyra.habitflow.dto.HabitStatisticsResponse;
 import com.kammyra.habitflow.service.HabitCompletionService;
+import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 
@@ -23,22 +24,18 @@ public class HabitCompletionController {
     @ResponseStatus(HttpStatus.CREATED)
     public HabitCompletionResponse createCompletion(
             @PathVariable Long habitId,
-            @RequestBody(required = false) HabitCompletionRequest request
+            @Valid @RequestBody(required = false) HabitCompletionRequest request
     ) {
         return completionService.createCompletion(habitId, request);
     }
 
     @GetMapping
-    public List<HabitCompletionResponse> getCompletions(
-            @PathVariable Long habitId
-    ) {
+    public List<HabitCompletionResponse> getCompletions(@PathVariable Long habitId) {
         return completionService.getCompletions(habitId);
     }
 
     @GetMapping("/statistics")
-    public HabitStatisticsResponse getStatistics(
-            @PathVariable Long habitId
-    ) {
+    public HabitStatisticsResponse getStatistics(@PathVariable Long habitId) {
         return completionService.getStatistics(habitId);
     }
 }
