@@ -5,15 +5,18 @@ import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 
+import java.time.Clock;
+import java.time.Instant;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 public class GlobalExceptionHandlerTest {
 
-    private final GlobalExceptionHandler handler = new GlobalExceptionHandler();
+    private final Clock clock = Clock.fixed(Instant.parse("2026-08-28T10:00:00Z"), ZoneOffset.UTC);
+    private final GlobalExceptionHandler handler = new GlobalExceptionHandler(clock);
 
     @Test
     void shouldHandleHabitNotFound() {
@@ -52,14 +55,9 @@ public class GlobalExceptionHandlerTest {
 
     @Test
     void shouldHandleFutureCompletion() {
-        LocalDateTime futureDate =
-                LocalDateTime.of(2026, 8, 23, 12, 0);
-
-        FutureCompletionException exception =
-                new FutureCompletionException(futureDate);
-
-        ResponseEntity<ErrorResponse> response =
-                handler.handleFutureCompletion(exception);
+        LocalDate futureDate = LocalDate.of(2026, 8, 23);
+        FutureCompletionException exception = new FutureCompletionException(futureDate);
+        ResponseEntity<ErrorResponse> response = handler.handleFutureCompletion(exception);
 
         assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
         assertNotNull(response.getBody());

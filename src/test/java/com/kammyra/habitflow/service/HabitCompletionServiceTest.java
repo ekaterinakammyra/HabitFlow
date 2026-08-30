@@ -5,36 +5,47 @@ import com.kammyra.habitflow.entity.HabitCompletion;
 import com.kammyra.habitflow.enums.Frequency;
 import com.kammyra.habitflow.repository.HabitCompletionRepository;
 import com.kammyra.habitflow.repository.HabitRepository;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.mockito.junit.jupiter.MockitoSettings;
+import org.mockito.quality.Strictness;
 
 import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.List;
+import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
+@ExtendWith(MockitoExtension.class)
+@MockitoSettings(strictness = Strictness.LENIENT)
 class HabitCompletionServiceTest {
 
-    private final HabitCompletionRepository completionRepository =
-            mock(HabitCompletionRepository.class);
+    @Mock
+    private HabitCompletionRepository completionRepository;
 
-    private final HabitRepository habitRepository =
-            mock(HabitRepository.class);
+    @Mock
+    private HabitRepository habitRepository;
 
     private final Clock clock = Clock.fixed(
             Instant.parse("2026-08-14T10:00:00Z"),
             ZoneId.of("UTC")
     );
 
-    private final HabitCompletionService service =
-            new HabitCompletionService(
-                    completionRepository,
-                    habitRepository,
-                    clock
-            );
+    private HabitCompletionService service;
+
+    @BeforeEach
+    void setUp() {
+        service = new HabitCompletionService(completionRepository, habitRepository, clock);
+    }
 
     @Test
     void shouldReturnZeroStreakWhenThereAreNoCompletions() {
@@ -44,11 +55,8 @@ class HabitCompletionServiceTest {
         habit.setName("Чтение");
         habit.setFrequency(Frequency.DAILY);
 
-        when(habitRepository.findById(1L))
-                .thenReturn(java.util.Optional.of(habit));
-
-        when(completionRepository.findByHabitIdOrderByCompletedAtAsc(1L))
-                .thenReturn(List.of());
+        when(habitRepository.findById(1L)).thenReturn(Optional.of(habit));
+        when(completionRepository.findByHabitIdOrderByCompletionDateAsc(1L)).thenReturn(List.of());
 
         var result = service.getStatistics(1L);
 
@@ -74,13 +82,9 @@ class HabitCompletionServiceTest {
         habit.setName("Чтение");
         habit.setFrequency(Frequency.DAILY);
 
-        when(habitRepository.findById(1L))
-                .thenReturn(java.util.Optional.of(habit));
-
-        when(completionRepository.findByHabitIdOrderByCompletedAtAsc(1L))
-                .thenReturn(List.of(
-                        completion(LocalDate.of(2026, 8, 14))
-                ));
+        when(habitRepository.findById(1L)).thenReturn(Optional.of(habit));
+        when(completionRepository.findByHabitIdOrderByCompletionDateAsc(1L))
+                .thenReturn(List.of(completion(LocalDate.of(2026, 8, 14))));
 
         var result = service.getStatistics(1L);
 
@@ -97,10 +101,8 @@ class HabitCompletionServiceTest {
         habit.setName("Чтение");
         habit.setFrequency(Frequency.DAILY);
 
-        when(habitRepository.findById(1L))
-                .thenReturn(java.util.Optional.of(habit));
-
-        when(completionRepository.findByHabitIdOrderByCompletedAtAsc(1L))
+        when(habitRepository.findById(1L)).thenReturn(Optional.of(habit));
+        when(completionRepository.findByHabitIdOrderByCompletionDateAsc(1L))
                 .thenReturn(List.of(
                         completion(LocalDate.of(2026, 8, 13)),
                         completion(LocalDate.of(2026, 8, 14))
@@ -120,10 +122,8 @@ class HabitCompletionServiceTest {
         habit.setName("Чтение");
         habit.setFrequency(Frequency.DAILY);
 
-        when(habitRepository.findById(1L))
-                .thenReturn(java.util.Optional.of(habit));
-
-        when(completionRepository.findByHabitIdOrderByCompletedAtAsc(1L))
+        when(habitRepository.findById(1L)).thenReturn(Optional.of(habit));
+        when(completionRepository.findByHabitIdOrderByCompletionDateAsc(1L))
                 .thenReturn(List.of(
                         completion(LocalDate.of(2026, 8, 12)),
                         completion(LocalDate.of(2026, 8, 13)),
@@ -144,10 +144,8 @@ class HabitCompletionServiceTest {
         habit.setName("Чтение");
         habit.setFrequency(Frequency.DAILY);
 
-        when(habitRepository.findById(1L))
-                .thenReturn(java.util.Optional.of(habit));
-
-        when(completionRepository.findByHabitIdOrderByCompletedAtAsc(1L))
+        when(habitRepository.findById(1L)).thenReturn(Optional.of(habit));
+        when(completionRepository.findByHabitIdOrderByCompletionDateAsc(1L))
                 .thenReturn(List.of(
                         completion(LocalDate.of(2026, 8, 10)),
                         completion(LocalDate.of(2026, 8, 11)),
@@ -169,10 +167,8 @@ class HabitCompletionServiceTest {
         habit.setName("Чтение");
         habit.setFrequency(Frequency.DAILY);
 
-        when(habitRepository.findById(1L))
-                .thenReturn(java.util.Optional.of(habit));
-
-        when(completionRepository.findByHabitIdOrderByCompletedAtAsc(1L))
+        when(habitRepository.findById(1L)).thenReturn(Optional.of(habit));
+        when(completionRepository.findByHabitIdOrderByCompletionDateAsc(1L))
                 .thenReturn(List.of(
                         completion(LocalDate.of(2026, 8, 10)),
                         completion(LocalDate.of(2026, 8, 11)),
@@ -194,10 +190,8 @@ class HabitCompletionServiceTest {
         habit.setName("Тренировка");
         habit.setFrequency(Frequency.WEEKLY);
 
-        when(habitRepository.findById(1L))
-                .thenReturn(java.util.Optional.of(habit));
-
-        when(completionRepository.findByHabitIdOrderByCompletedAtAsc(1L))
+        when(habitRepository.findById(1L)).thenReturn(Optional.of(habit));
+        when(completionRepository.findByHabitIdOrderByCompletionDateAsc(1L))
                 .thenReturn(List.of(
                         completion(LocalDate.of(2026, 7, 27)),
                         completion(LocalDate.of(2026, 8, 3)),
@@ -219,22 +213,19 @@ class HabitCompletionServiceTest {
         habit.setName("Тренировка");
         habit.setFrequency(Frequency.WEEKLY);
 
-        when(habitRepository.findById(1L))
-                .thenReturn(java.util.Optional.of(habit));
-
-        when(completionRepository.findByHabitIdOrderByCompletedAtAsc(1L))
+        when(habitRepository.findById(1L)).thenReturn(Optional.of(habit));
+        when(completionRepository.findByHabitIdOrderByCompletionDateAsc(1L))
                 .thenReturn(List.of(
-                        completion(LocalDate.of(2026, 7, 27)),
+                        completion(LocalDate.of(2026, 7, 20)),
                         completion(LocalDate.of(2026, 8, 3)),
-                        completion(LocalDate.of(2026, 8, 17)),
-                        completion(LocalDate.of(2026, 8, 24))
+                        completion(LocalDate.of(2026, 8, 10))
                 ));
 
         var result = service.getStatistics(1L);
 
         assertEquals(2, result.getCurrentStreak());
         assertEquals(2, result.getBestStreak());
-        assertEquals(4, result.getTotalCompletions());
+        assertEquals(3, result.getTotalCompletions());
     }
 
     @Test
@@ -245,19 +236,13 @@ class HabitCompletionServiceTest {
         habit.setName("Чтение");
         habit.setFrequency(Frequency.DAILY);
 
-        when(habitRepository.findById(1L))
-                .thenReturn(java.util.Optional.of(habit));
-
-        when(completionRepository.existsByHabitIdAndCompletionDate(
-                1L,
-                LocalDate.of(2026, 8, 14)
-        )).thenReturn(false);
+        when(habitRepository.findById(1L)).thenReturn(Optional.of(habit));
+        when(completionRepository.existsByHabitIdAndCompletionDate(1L, LocalDate.of(2026, 8, 14))).thenReturn(false);
+        when(completionRepository.save(any(HabitCompletion.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         service.completeHabit(1L);
 
-        verify(completionRepository).save(
-                org.mockito.ArgumentMatchers.any(HabitCompletion.class)
-        );
+        verify(completionRepository).save(any(HabitCompletion.class));
     }
 
     @Test
@@ -268,38 +253,20 @@ class HabitCompletionServiceTest {
         habit.setName("Чтение");
         habit.setFrequency(Frequency.DAILY);
 
-        when(habitRepository.findById(1L))
-                .thenReturn(java.util.Optional.of(habit));
+        when(habitRepository.findById(1L)).thenReturn(Optional.of(habit));
+        when(completionRepository.existsByHabitIdAndCompletionDate(1L, LocalDate.of(2026, 8, 14))).thenReturn(true);
 
-        when(completionRepository.existsByHabitIdAndCompletionDate(
-                1L,
-                LocalDate.of(2026, 8, 14)
-        )).thenReturn(true);
+        assertThrows(IllegalStateException.class, () -> service.completeHabit(1L));
 
-        org.junit.jupiter.api.Assertions.assertThrows(
-                IllegalStateException.class,
-                () -> service.completeHabit(1L)
-        );
-
-        org.mockito.Mockito.verify(
-                completionRepository,
-                org.mockito.Mockito.never()
-        ).save(org.mockito.ArgumentMatchers.any(HabitCompletion.class));
+        verify(completionRepository, never()).save(any(HabitCompletion.class));
     }
 
     @Test
     void shouldThrowExceptionWhenHabitDoesNotExist() {
+        when(habitRepository.findById(999L)).thenReturn(Optional.empty());
 
-        when(habitRepository.findById(999L)).thenReturn(java.util.Optional.empty());
+        assertThrows(RuntimeException.class, () -> service.completeHabit(999L));
 
-        org.junit.jupiter.api.Assertions.assertThrows(
-                RuntimeException.class,
-                () -> service.completeHabit(999L)
-        );
-
-        verify(
-                completionRepository,
-                org.mockito.Mockito.never()
-        ).save(org.mockito.ArgumentMatchers.any(HabitCompletion.class));
+        verify(completionRepository, never()).save(any(HabitCompletion.class));
     }
 }

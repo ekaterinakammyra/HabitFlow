@@ -1,6 +1,6 @@
 package com.kammyra.habitflow.controller;
 
-import tools.jackson.databind.ObjectMapper;
+import com.kammyra.habitflow.config.TimeConfig;
 import com.kammyra.habitflow.dto.HabitRequest;
 import com.kammyra.habitflow.dto.HabitResponse;
 import com.kammyra.habitflow.dto.HabitUpdateRequest;
@@ -9,9 +9,11 @@ import com.kammyra.habitflow.service.HabitService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
-import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
+import tools.jackson.databind.ObjectMapper;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -23,6 +25,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @WebMvcTest(HabitController.class)
+@Import(TimeConfig.class)
 class HabitControllerTest {
 
     @Autowired
@@ -57,7 +60,7 @@ class HabitControllerTest {
         mockMvc.perform(post("/api/habits")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
-                .andExpect(status().isOk())
+                .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.id").value(1))
                 .andExpect(jsonPath("$.name").value("Чтение"))
                 .andExpect(jsonPath("$.description").value("Читать каждый день"))

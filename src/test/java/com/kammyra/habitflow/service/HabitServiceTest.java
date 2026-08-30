@@ -8,6 +8,9 @@ import com.kammyra.habitflow.exception.HabitNotFoundException;
 import com.kammyra.habitflow.repository.HabitRepository;
 import org.junit.jupiter.api.Test;
 
+import java.time.Clock;
+import java.time.Instant;
+import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Optional;
 
@@ -17,8 +20,8 @@ import static org.mockito.Mockito.*;
 class HabitServiceTest {
 
     private final HabitRepository habitRepository = mock(HabitRepository.class);
-
-    private final HabitService service = new HabitService(habitRepository);
+    private final Clock clock = Clock.fixed(Instant.parse("2026-08-28T10:00:00Z"), ZoneOffset.UTC);
+    private final HabitService service = new HabitService(habitRepository, clock);
 
     @Test
     void shouldCreateHabitSuccessfully() {
@@ -76,14 +79,9 @@ class HabitServiceTest {
 
     @Test
     void shouldThrowExceptionWhenHabitDoesNotExist() {
+        when(habitRepository.findById(999L)).thenReturn(Optional.empty());
 
-        when(habitRepository.findById(999L))
-                .thenReturn(Optional.empty());
-
-        assertThrows(
-                HabitNotFoundException.class,
-                () -> service.getHabitById(999L)
-        );
+        assertThrows(HabitNotFoundException.class, () -> service.getHabitById(999L));
 
         verify(habitRepository).findById(999L);
     }
@@ -212,16 +210,10 @@ class HabitServiceTest {
 
     @Test
     void shouldThrowExceptionWhenDeletingNonExistingHabit() {
+        when(habitRepository.findById(999L)).thenReturn(Optional.empty());
 
-        when(habitRepository.findById(999L))
-                .thenReturn(Optional.empty());
+        assertThrows(HabitNotFoundException.class, () -> service.deleteHabit(999L));
 
-        assertThrows(
-                HabitNotFoundException.class,
-                () -> service.deleteHabit(999L)
-        );
-
-        verify(habitRepository, never())
-                .delete(any(Habit.class));
+        verify(habitRepository, never()).delete(any(Habit.class));
     }
 }
