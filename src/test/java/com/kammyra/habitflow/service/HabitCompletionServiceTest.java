@@ -1,8 +1,11 @@
 package com.kammyra.habitflow.service;
 
+import com.kammyra.habitflow.dto.HabitCompletionRequest;
+import com.kammyra.habitflow.dto.HabitCompletionResponse;
 import com.kammyra.habitflow.entity.Habit;
 import com.kammyra.habitflow.entity.HabitCompletion;
 import com.kammyra.habitflow.enums.Frequency;
+import com.kammyra.habitflow.exception.HabitAlreadyCompletedException;
 import com.kammyra.habitflow.repository.HabitCompletionRepository;
 import com.kammyra.habitflow.repository.HabitRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -20,8 +23,7 @@ import java.time.ZoneId;
 import java.util.List;
 import java.util.Optional;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
@@ -268,5 +270,68 @@ class HabitCompletionServiceTest {
         assertThrows(RuntimeException.class, () -> service.completeHabit(999L));
 
         verify(completionRepository, never()).save(any(HabitCompletion.class));
+    }
+
+    @Test
+    void shouldNotCompleteWeeklyHabitTwiceInSameWeek() {
+
+        Habit habit = new Habit();
+        habit.setId(1L);
+        habit.setFrequency(Frequency.WEEKLY);
+
+        when(habitRepository.findById(1L))
+                .thenReturn(Optional.of(habit));
+
+        when(completionRepository
+                .existsByHabitIdAndCompletionDateBetween(
+                        eq(1L),
+                        eq(LocalDate.of(2026, 8, 10)),
+                        eq(LocalDate.of(2026, 8, 16))
+                ))
+                .thenReturn(true);
+
+        HabitCompletionRequest request = new HabitCompletionRequest();
+        request.setCompletionDate(LocalDate.of(2026, 8, 14));
+
+        assertThrows(
+                HabitAlreadyCompletedException.class,
+                () -> service.createCompletion(1L, request)
+        );
+
+        verify(completionRepository, never())
+                .save(any(HabitCompletion.class));
+    }
+
+    @Test
+    void shouldAllowWeeklyHabitCompletionInNextWeek() {
+
+        Habit habit = new Habit();
+        habit.setId(1L);
+        habit.setFrequency(Frequency.WEEKLY);
+
+        when(habitRepository.findById(1L))
+                .thenReturn(Optional.of(habit));
+
+        when(completionRepository
+                .existsByHabitIdAndCompletionDateBetween(
+                        eq(1L),
+                        eq(LocalDate.of(2026, 8, 3)),
+                        eq(LocalDate.of(2026, 8, 9))
+                ))
+                .thenReturn(false);
+
+        when(completionRepository.save(any(HabitCompletion.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+
+        HabitCompletionRequest request = new HabitCompletionRequest();
+        request.setCompletionDate(LocalDate.of(2026, 8, 3));
+
+        HabitCompletionResponse response =
+                service.createCompletion(1L, request);
+
+        assertNotNull(response);
+
+        verify(completionRepository)
+                .save(any(HabitCompletion.class));
     }
 }

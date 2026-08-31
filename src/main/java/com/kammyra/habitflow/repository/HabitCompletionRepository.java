@@ -19,6 +19,12 @@ public interface HabitCompletionRepository extends JpaRepository<HabitCompletion
             LocalDate completionDate
     );
 
+    boolean existsByHabitIdAndCompletionDateBetween(
+            Long habitId,
+            LocalDate startDate,
+            LocalDate endDate
+    );
+
     @Query("SELECT c FROM HabitCompletion c JOIN FETCH c.habit WHERE c.habit.id = :habitId")
     List<HabitCompletion> findByHabitIdWithHabit(@Param("habitId") Long habitId);
 

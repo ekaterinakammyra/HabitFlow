@@ -60,9 +60,11 @@ public class HabitCompletionService {
             throw new FutureCompletionException(completionDate);
         }
 
-        if (completionRepository.existsByHabitIdAndCompletionDate(habitId, completionDate)) {
-            throw new HabitAlreadyCompletedException(habitId, completionDate);
-        }
+        validateCompletion(
+                habit,
+                habitId,
+                completionDate
+        );
 
         HabitCompletion completion = new HabitCompletion();
 
@@ -72,6 +74,64 @@ public class HabitCompletionService {
 
         HabitCompletion saved = completionRepository.save(completion);
         return toResponse(saved);
+    }
+
+    private void validateCompletion(
+            Habit habit,
+            Long habitId,
+            LocalDate completionDate
+    ) {
+
+        if (habit.getFrequency() == Frequency.DAILY) {
+            validateDailyCompletion(
+                    habitId,
+                    completionDate
+            );
+            return;
+        }
+
+        validateWeeklyCompletion(
+                habitId,
+                completionDate
+        );
+    }
+
+    private void validateDailyCompletion(
+            Long habitId,
+            LocalDate completionDate
+    ) {
+
+        if (completionRepository.existsByHabitIdAndCompletionDate(
+                habitId,
+                completionDate
+        )) {
+            throw new HabitAlreadyCompletedException(
+                    habitId,
+                    completionDate
+            );
+        }
+    }
+
+    private void validateWeeklyCompletion(
+            Long habitId,
+            LocalDate completionDate
+    ) {
+
+        LocalDate weekStart = completionDate
+                .with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY));
+
+        LocalDate weekEnd = weekStart.plusDays(6);
+
+        if (completionRepository.existsByHabitIdAndCompletionDateBetween(
+                habitId,
+                weekStart,
+                weekEnd
+        )) {
+            throw new HabitAlreadyCompletedException(
+                    habitId,
+                    completionDate
+            );
+        }
     }
 
     @Transactional(readOnly = true)
