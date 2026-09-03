@@ -6,6 +6,7 @@ import com.kammyra.habitflow.dto.HabitStatisticsResponse;
 import com.kammyra.habitflow.entity.Habit;
 import com.kammyra.habitflow.entity.HabitCompletion;
 import com.kammyra.habitflow.enums.Frequency;
+import com.kammyra.habitflow.exception.CompletionBeforeHabitCreationException;
 import com.kammyra.habitflow.exception.FutureCompletionException;
 import com.kammyra.habitflow.exception.HabitAlreadyCompletedException;
 import com.kammyra.habitflow.exception.HabitNotFoundException;
@@ -59,6 +60,11 @@ public class HabitCompletionService {
         if (completionDate.isAfter(today)) {
             throw new FutureCompletionException(completionDate);
         }
+
+        validateCompletionDate(
+                habit,
+                completionDate
+        );
 
         validateCompletion(
                 habit,
@@ -372,5 +378,21 @@ public class HabitCompletionService {
 
     public void completeHabit(Long habitId) {
         createCompletion(habitId, null);
+    }
+
+    private void validateCompletionDate(
+            Habit habit,
+            LocalDate completionDate
+    ) {
+
+        LocalDate habitCreationDate =
+                habit.getCreatedAt().toLocalDate();
+
+        if (completionDate.isBefore(habitCreationDate)) {
+            throw new CompletionBeforeHabitCreationException(
+                    completionDate,
+                    habitCreationDate
+            );
+        }
     }
 }

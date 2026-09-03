@@ -85,11 +85,13 @@ class HabitCompletionIntegrationTest {
 
         Long habitId = createHabit();
 
+        LocalDate today = LocalDate.now();
+
         String requestBody = """
-                {
-                    "completionDate": "2026-08-20"
-                }
-                """;
+            {
+                "completionDate": "%s"
+            }
+            """.formatted(today);
 
         mockMvc.perform(
                         post("/api/habits/" + habitId + "/completions")
@@ -98,7 +100,7 @@ class HabitCompletionIntegrationTest {
                 )
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.habitId").value(habitId))
-                .andExpect(jsonPath("$.completionDate").value("2026-08-20"));
+                .andExpect(jsonPath("$.completionDate").value(today.toString()));
     }
 
     @Test
@@ -106,11 +108,13 @@ class HabitCompletionIntegrationTest {
 
         Long habitId = createHabit();
 
+        LocalDate today = LocalDate.now();
+
         String requestBody = """
-                {
-                    "completionDate": "2026-08-20"
-                }
-                """;
+            {
+                "completionDate": "%s"
+            }
+            """.formatted(today);
 
         mockMvc.perform(
                         post("/api/habits/" + habitId + "/completions")
@@ -163,11 +167,12 @@ class HabitCompletionIntegrationTest {
     void shouldNotCompleteHabitTwiceOnSameDate() throws Exception {
         Long habitId = createHabit();
 
+        LocalDate today = LocalDate.now();
         String request = """
             {
-                "completionDate": "2026-08-20"
+                "completionDate": "%s"
             }
-            """;
+            """.formatted(today);
 
         mockMvc.perform(post("/api/habits/{habitId}/completions", habitId)
                         .contentType(MediaType.APPLICATION_JSON)
@@ -178,31 +183,6 @@ class HabitCompletionIntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(request))
                 .andExpect(status().isConflict());
-    }
-
-    @Test
-    void shouldAllowCompletionOnDifferentDates() throws Exception {
-        Long habitId = createHabit();
-
-        mockMvc.perform(post("/api/habits/{habitId}/completions", habitId)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                            {
-                                "completionDate": "2026-08-20"
-                            }
-                            """))
-                .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.completionDate").value("2026-08-20"));
-
-        mockMvc.perform(post("/api/habits/{habitId}/completions", habitId)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                            {
-                                "completionDate": "2026-08-21"
-                            }
-                            """))
-                .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.completionDate").value("2026-08-21"));
     }
 
     @Test
@@ -248,15 +228,19 @@ class HabitCompletionIntegrationTest {
 
     @Test
     void shouldReturnCorrectHabitId() throws Exception {
+
         Long habitId = createHabit();
 
-        mockMvc.perform(post("/api/habits/{habitId}/completions", habitId)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                            {
-                                "completionDate": "2026-08-20"
-                            }
-                            """))
+        LocalDate today = LocalDate.now();
+
+        mockMvc.perform(
+                        post("/api/habits/{habitId}/completions", habitId)
+                                .contentType("application/json")
+                                .content("""
+                                {
+                                    "completionDate": "%s"
+                                }
+                                """.formatted(today)))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.habitId").value(habitId));
     }

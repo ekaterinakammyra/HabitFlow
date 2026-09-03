@@ -5,6 +5,7 @@ import com.kammyra.habitflow.dto.HabitCompletionResponse;
 import com.kammyra.habitflow.entity.Habit;
 import com.kammyra.habitflow.entity.HabitCompletion;
 import com.kammyra.habitflow.enums.Frequency;
+import com.kammyra.habitflow.exception.CompletionBeforeHabitCreationException;
 import com.kammyra.habitflow.exception.HabitAlreadyCompletedException;
 import com.kammyra.habitflow.repository.HabitCompletionRepository;
 import com.kammyra.habitflow.repository.HabitRepository;
@@ -16,10 +17,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
 
-import java.time.Clock;
-import java.time.Instant;
-import java.time.LocalDate;
-import java.time.ZoneId;
+import java.time.*;
 import java.util.List;
 import java.util.Optional;
 
@@ -237,10 +235,28 @@ class HabitCompletionServiceTest {
         habit.setId(1L);
         habit.setName("Чтение");
         habit.setFrequency(Frequency.DAILY);
+        habit.setCreatedAt(
+                LocalDateTime.of(
+                        2026,
+                        8,
+                        10,
+                        10,
+                        0
+                )
+        );
 
-        when(habitRepository.findById(1L)).thenReturn(Optional.of(habit));
-        when(completionRepository.existsByHabitIdAndCompletionDate(1L, LocalDate.of(2026, 8, 14))).thenReturn(false);
-        when(completionRepository.save(any(HabitCompletion.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(habitRepository.findById(1L))
+                .thenReturn(Optional.of(habit));
+
+        when(completionRepository
+                .existsByHabitIdAndCompletionDate(
+                        1L,
+                        LocalDate.of(2026, 8, 14)
+                ))
+                .thenReturn(false);
+
+        when(completionRepository.save(any(HabitCompletion.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
 
         service.completeHabit(1L);
 
@@ -254,13 +270,27 @@ class HabitCompletionServiceTest {
         habit.setId(1L);
         habit.setName("Чтение");
         habit.setFrequency(Frequency.DAILY);
+        habit.setCreatedAt(
+                LocalDateTime.of(2026, 8, 10, 10, 0)
+        );
 
-        when(habitRepository.findById(1L)).thenReturn(Optional.of(habit));
-        when(completionRepository.existsByHabitIdAndCompletionDate(1L, LocalDate.of(2026, 8, 14))).thenReturn(true);
+        when(habitRepository.findById(1L))
+                .thenReturn(Optional.of(habit));
 
-        assertThrows(IllegalStateException.class, () -> service.completeHabit(1L));
+        when(completionRepository
+                .existsByHabitIdAndCompletionDate(
+                        1L,
+                        LocalDate.of(2026, 8, 14)
+                ))
+                .thenReturn(true);
 
-        verify(completionRepository, never()).save(any(HabitCompletion.class));
+        assertThrows(
+                IllegalStateException.class,
+                () -> service.completeHabit(1L)
+        );
+
+        verify(completionRepository, never())
+                .save(any(HabitCompletion.class));
     }
 
     @Test
@@ -278,6 +308,7 @@ class HabitCompletionServiceTest {
         Habit habit = new Habit();
         habit.setId(1L);
         habit.setFrequency(Frequency.WEEKLY);
+        habit.setCreatedAt(LocalDateTime.of(2026, 8, 10, 10, 0));
 
         when(habitRepository.findById(1L))
                 .thenReturn(Optional.of(habit));
@@ -308,6 +339,7 @@ class HabitCompletionServiceTest {
         Habit habit = new Habit();
         habit.setId(1L);
         habit.setFrequency(Frequency.WEEKLY);
+        habit.setCreatedAt(LocalDateTime.of(2026, 8, 1, 10, 0));
 
         when(habitRepository.findById(1L))
                 .thenReturn(Optional.of(habit));
@@ -325,6 +357,88 @@ class HabitCompletionServiceTest {
 
         HabitCompletionRequest request = new HabitCompletionRequest();
         request.setCompletionDate(LocalDate.of(2026, 8, 3));
+
+        HabitCompletionResponse response =
+                service.createCompletion(1L, request);
+
+        assertNotNull(response);
+
+        verify(completionRepository)
+                .save(any(HabitCompletion.class));
+    }
+
+    @Test
+    void shouldNotCompleteHabitBeforeHabitCreationDate() {
+
+        Habit habit = new Habit();
+        habit.setId(1L);
+        habit.setName("Чтение");
+        habit.setFrequency(Frequency.DAILY);
+        habit.setCreatedAt(
+                LocalDateTime.of(
+                        2026,
+                        8,
+                        10,
+                        10,
+                        0
+                )
+        );
+
+        when(habitRepository.findById(1L))
+                .thenReturn(Optional.of(habit));
+
+        HabitCompletionRequest request =
+                new HabitCompletionRequest();
+
+        request.setCompletionDate(
+                LocalDate.of(2026, 8, 9)
+        );
+
+        assertThrows(
+                CompletionBeforeHabitCreationException.class,
+                () -> service.createCompletion(1L, request)
+        );
+
+        verify(completionRepository, never())
+                .save(any(HabitCompletion.class));
+    }
+
+    @Test
+    void shouldAllowCompletionOnHabitCreationDate() {
+
+        Habit habit = new Habit();
+        habit.setId(1L);
+        habit.setName("Чтение");
+        habit.setFrequency(Frequency.DAILY);
+        habit.setCreatedAt(
+                LocalDateTime.of(
+                        2026,
+                        8,
+                        10,
+                        10,
+                        0
+                )
+        );
+
+        when(habitRepository.findById(1L))
+                .thenReturn(Optional.of(habit));
+
+        when(completionRepository
+                .existsByHabitIdAndCompletionDate(
+                        1L,
+                        LocalDate.of(2026, 8, 10)
+                ))
+                .thenReturn(false);
+
+        when(completionRepository.save(any(HabitCompletion.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+
+        HabitCompletionRequest request =
+                new HabitCompletionRequest();
+
+        request.setCompletionDate(
+                LocalDate.of(2026, 8, 10)
+        );
 
         HabitCompletionResponse response =
                 service.createCompletion(1L, request);
