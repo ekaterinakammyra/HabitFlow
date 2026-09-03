@@ -4,7 +4,9 @@ import com.kammyra.habitflow.dto.HabitRequest;
 import com.kammyra.habitflow.dto.HabitResponse;
 import com.kammyra.habitflow.dto.HabitUpdateRequest;
 import com.kammyra.habitflow.entity.Habit;
+import com.kammyra.habitflow.exception.HabitFrequencyChangeException;
 import com.kammyra.habitflow.exception.HabitNotFoundException;
+import com.kammyra.habitflow.repository.HabitCompletionRepository;
 import com.kammyra.habitflow.repository.HabitRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -18,10 +20,16 @@ import java.util.List;
 public class HabitService {
 
     private final HabitRepository habitRepository;
+    private final HabitCompletionRepository habitCompletionRepository;
     private final Clock clock;
 
-    public HabitService(HabitRepository habitRepository, Clock clock) {
+    public HabitService(
+            HabitRepository habitRepository,
+            HabitCompletionRepository habitCompletionRepository,
+            Clock clock
+    ) {
         this.habitRepository = habitRepository;
+        this.habitCompletionRepository = habitCompletionRepository;
         this.clock = clock;
     }
 
@@ -32,7 +40,9 @@ public class HabitService {
                 request.getFrequency(),
                 LocalDateTime.now(clock)
         );
+
         Habit savedHabit = habitRepository.save(habit);
+
         return toResponse(savedHabit);
     }
 
@@ -58,6 +68,11 @@ public class HabitService {
     ) {
         Habit habit = habitRepository.findById(id)
                 .orElseThrow(() -> new HabitNotFoundException(id));
+
+        if (habit.getFrequency() != request.getFrequency()
+                && habitCompletionRepository.existsByHabitId(id)) {
+            throw new HabitFrequencyChangeException();
+        }
 
         habit.setName(request.getName());
         habit.setDescription(request.getDescription());

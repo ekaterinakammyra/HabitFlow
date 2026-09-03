@@ -4,7 +4,9 @@ import com.kammyra.habitflow.dto.HabitRequest;
 import com.kammyra.habitflow.dto.HabitUpdateRequest;
 import com.kammyra.habitflow.entity.Habit;
 import com.kammyra.habitflow.enums.Frequency;
+import com.kammyra.habitflow.exception.HabitFrequencyChangeException;
 import com.kammyra.habitflow.exception.HabitNotFoundException;
+import com.kammyra.habitflow.repository.HabitCompletionRepository;
 import com.kammyra.habitflow.repository.HabitRepository;
 import org.junit.jupiter.api.Test;
 
@@ -20,8 +22,15 @@ import static org.mockito.Mockito.*;
 class HabitServiceTest {
 
     private final HabitRepository habitRepository = mock(HabitRepository.class);
+    private final HabitCompletionRepository habitCompletionRepository = mock(HabitCompletionRepository.class);
+
     private final Clock clock = Clock.fixed(Instant.parse("2026-08-28T10:00:00Z"), ZoneOffset.UTC);
-    private final HabitService service = new HabitService(habitRepository, clock);
+    private final HabitService service =
+            new HabitService(
+                    habitRepository,
+                    habitCompletionRepository,
+                    clock
+            );
 
     @Test
     void shouldCreateHabitSuccessfully() {
@@ -95,6 +104,7 @@ class HabitServiceTest {
                 Frequency.DAILY,
                 null
         );
+
         firstHabit.setId(1L);
 
         Habit secondHabit = new Habit(
@@ -103,6 +113,7 @@ class HabitServiceTest {
                 Frequency.WEEKLY,
                 null
         );
+
         secondHabit.setId(2L);
 
         when(habitRepository.findAll())
@@ -165,6 +176,78 @@ class HabitServiceTest {
 
         verify(habitRepository).findById(1L);
         verify(habitRepository).save(habit);
+    }
+
+    @Test
+    void shouldAllowFrequencyChangeWhenHabitHasNoCompletions() {
+
+        Habit habit = new Habit(
+                "Чтение",
+                "Читать каждый день",
+                Frequency.DAILY,
+                null
+        );
+
+        habit.setId(1L);
+
+        when(habitRepository.findById(1L))
+                .thenReturn(Optional.of(habit));
+
+        when(habitCompletionRepository.existsByHabitId(1L))
+                .thenReturn(false);
+
+        when(habitRepository.save(habit))
+                .thenReturn(habit);
+
+        HabitUpdateRequest request = new HabitUpdateRequest();
+        request.setName("Чтение");
+        request.setDescription("Читать каждый день");
+        request.setFrequency(Frequency.WEEKLY);
+
+        var result = service.updateHabit(1L, request);
+
+        assertEquals(Frequency.WEEKLY, result.getFrequency());
+
+        verify(habitCompletionRepository)
+                .existsByHabitId(1L);
+
+        verify(habitRepository)
+                .save(habit);
+    }
+
+    @Test
+    void shouldThrowExceptionWhenChangingFrequencyAfterCompletion() {
+
+        Habit habit = new Habit(
+                "Чтение",
+                "Читать каждый день",
+                Frequency.DAILY,
+                null
+        );
+
+        habit.setId(1L);
+
+        when(habitRepository.findById(1L))
+                .thenReturn(Optional.of(habit));
+
+        when(habitCompletionRepository.existsByHabitId(1L))
+                .thenReturn(true);
+
+        HabitUpdateRequest request = new HabitUpdateRequest();
+        request.setName("Чтение");
+        request.setDescription("Читать каждый день");
+        request.setFrequency(Frequency.WEEKLY);
+
+        assertThrows(
+                HabitFrequencyChangeException.class,
+                () -> service.updateHabit(1L, request)
+        );
+
+        verify(habitCompletionRepository)
+                .existsByHabitId(1L);
+
+        verify(habitRepository, never())
+                .save(any(Habit.class));
     }
 
     @Test

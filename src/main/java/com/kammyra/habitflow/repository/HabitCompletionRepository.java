@@ -14,6 +14,10 @@ public interface HabitCompletionRepository extends JpaRepository<HabitCompletion
 
     List<HabitCompletion> findByHabitIdOrderByCompletedAtAsc(Long habitId);
 
+    boolean existsByHabitId(
+            Long habitId
+    );
+
     boolean existsByHabitIdAndCompletionDate(
             Long habitId,
             LocalDate completionDate
