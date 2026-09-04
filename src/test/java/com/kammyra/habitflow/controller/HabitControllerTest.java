@@ -5,6 +5,7 @@ import com.kammyra.habitflow.dto.HabitRequest;
 import com.kammyra.habitflow.dto.HabitResponse;
 import com.kammyra.habitflow.dto.HabitUpdateRequest;
 import com.kammyra.habitflow.enums.Frequency;
+import com.kammyra.habitflow.exception.HabitFrequencyChangeException;
 import com.kammyra.habitflow.service.HabitService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -303,5 +304,35 @@ class HabitControllerTest {
                         eq(1L),
                         any(HabitUpdateRequest.class)
                 );
+    }
+
+    @Test
+    void shouldRejectFrequencyChangeAfterHabitCompletion() throws Exception {
+
+        HabitUpdateRequest request = new HabitUpdateRequest();
+
+        request.setName("Чтение");
+        request.setDescription("Читать каждый день");
+        request.setFrequency(Frequency.WEEKLY);
+
+        when(habitService.updateHabit(
+                eq(1L),
+                any(HabitUpdateRequest.class)
+        )).thenThrow(new HabitFrequencyChangeException());
+
+        mockMvc.perform(put("/api/habits/1")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request))
+                )
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.status").value(409))
+                .andExpect(jsonPath("$.error").value("Conflict"))
+                .andExpect(jsonPath("$.message")
+                        .value("Cannot change habit frequency after it has been completed"));
+
+        verify(habitService).updateHabit(
+                eq(1L),
+                any(HabitUpdateRequest.class)
+        );
     }
 }

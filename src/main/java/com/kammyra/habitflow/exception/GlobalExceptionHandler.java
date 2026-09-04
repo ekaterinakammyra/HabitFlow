@@ -125,4 +125,20 @@ public class GlobalExceptionHandler {
         );
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
     }
+
+    @ExceptionHandler(HabitFrequencyChangeException.class)
+    public ResponseEntity<ErrorResponse> handleHabitFrequencyChange(
+            HabitFrequencyChangeException exception
+    ) {
+        ErrorResponse response = new ErrorResponse(
+                LocalDateTime.now(clock),
+                HttpStatus.CONFLICT.value(),
+                "Conflict",
+                exception.getMessage()
+        );
+
+        return ResponseEntity
+                .status(HttpStatus.CONFLICT)
+                .body(response);
+    }
 }

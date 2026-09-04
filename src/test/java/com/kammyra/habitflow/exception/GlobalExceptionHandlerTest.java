@@ -66,4 +66,20 @@ public class GlobalExceptionHandlerTest {
         assertEquals("Bad Request", response.getBody().getError());
         assertEquals(exception.getMessage(), response.getBody().getMessage());
     }
+
+    @Test
+    void shouldHandleHabitFrequencyChangeException() {
+
+        HabitFrequencyChangeException exception = new HabitFrequencyChangeException();
+
+        ResponseEntity<ErrorResponse> response = handler.handleHabitFrequencyChange(exception);
+
+        assertEquals(HttpStatus.CONFLICT, response.getStatusCode());
+        assertNotNull(response.getBody());
+
+        assertEquals(409, response.getBody().getStatus());
+        assertEquals("Conflict", response.getBody().getError());
+        assertEquals("Cannot change habit frequency after it has been completed", response.getBody().getMessage()
+        );
+    }
 }
