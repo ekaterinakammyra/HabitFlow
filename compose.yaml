@@ -1,0 +1,16 @@
+services:
+  postgres:
+    image: postgres:17
+    container_name: habitflow-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: habitflow
+      POSTGRES_USER: habitflow
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    ports:
+      - "5432:5432"
+    volumes:
+      - habitflow-postgres-data:/var/lib/postgresql/data
+
+volumes:
+  habitflow-postgres-data:
